@@ -3,72 +3,22 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
-import mongoose from 'mongoose';
-import { createAdapter } from '@socket.io/redis-adapter';
-import Redis from "ioredis"
+import { setupDB, getScalingAdapter } from './utils.js';
 
 const functionInstanceId = Math.floor(Math.random() * 10000);
 console.log('Started with instance id ' + functionInstanceId);
 
-// MongoDB Setup
-console.log("Connecting to MongoDB at " + process.env['MY_MONGODB_DATABASE_URL']);
-mongoose.connect(process.env['MY_MONGODB_DATABASE_URL']);
-
-const messageSchema = new mongoose.Schema(
-  {
-    id: {
-      type: Number,
-      unique: true,
-      required: true,
-    },
-    content: String,
-    clientOffset: {
-      type: String,
-      unique: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const Message = mongoose.model('Message', messageSchema);
-
-
-// Redis Cluster Setup with Upstash Redis URL
-// It is recommended to use Redis for scaling Socket.IO
-// You can provide one using the Genezio Upstash Integration.
-// You can read more here: 
-//
-// https://genezio.com/docs/integrations/upstash-redis/
-// https://socket.io/docs/v4/tutorial/step-9
-let pubCluster;
-let subCluster;
-let adapter;
-if (process.env.UPSTASH_REDIS_URL) {
-    console.log("Connecting to Redis at " + process.env.UPSTASH_REDIS_URL);
-    pubCluster = new Redis(process.env.UPSTASH_REDIS_URL);
-    subCluster = pubCluster.duplicate();
-
-    // Add error handlers
-    pubCluster.on('error', (err) => console.error('Redis Pub Client Error:', err));
-    subCluster.on('error', (err) => console.error('Redis Sub Client Error:', err));
-
-    adapter = createAdapter(pubCluster, subCluster)
-} else {
-    console.log("No Redis URL provided. We advice you to provide one to scale your app.");
-}
+const Message = setupDB();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const adapter = await getScalingAdapter();
+const app = express();
+const server = createServer(app);
 
 // Create Socket.IO server and add Redis adapter
 const io = new Server(server, {
   connectionStateRecovery: {},
   adapter: adapter,
 });
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const app = express();
-const server = createServer(app);
 
 app.get('/', (req, res) => {
   console.log("Getting / from instance id " + functionInstanceId);
