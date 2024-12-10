@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
 import { setupDB, getScalingAdapter } from './utils.js';
 
+// Generate a random instance id
+// Just for debugging: This is used to differentiate between multiple instances
 const functionInstanceId = Math.floor(Math.random() * 10000);
 console.log('Started with instance id ' + functionInstanceId);
 
