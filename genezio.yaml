@@ -15,9 +15,9 @@ backend:
             - npm install
 name: socket-chat-example
 region: eu-central-1
-yamlVersion: 2
 services:
     databases:
         - name: my-mongodb
-          type: mongo-atlas
           region: eu-central-1
+          type: mongo-atlas
+yamlVersion: 2
